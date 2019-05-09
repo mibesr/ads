@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"ads/pkg/common"
 	"ads/pkg/ad_delivery/service"
+	"ads/pkg/common"
 	"encoding/json"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,6 +18,7 @@ func InitAdPlanController(mux *http.ServeMux) {
 }
 
 type AdPlanReq struct {
+	PlanId    string `json:"plan_id"`
 	UserId    string `json:"user_id"`
 	Name      string `json:"name"`
 	StartTime int64  `json:"start_time"`
@@ -91,7 +93,7 @@ func GetAdPlans(w http.ResponseWriter, req *http.Request) {
 			common.Return(200, []byte(common.BuildDefaultResponse(resp)), w)
 		}
 	} else {
-		common.Return(405, []byte(common.HttpPostOnly.Error()), w)
+		common.Return(405, []byte(common.HttpGetOnly.Error()), w)
 	}
 }
 
@@ -106,7 +108,7 @@ func UpdateAdPlan(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		adPlan := &service.AdPlan{
-			UserId:    r.UserId,
+			MongoId:    bson.ObjectIdHex(r.PlanId),
 			Name:      r.Name,
 			StartTime: r.StartTime,
 			EndTime:   r.EndTime,
