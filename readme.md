@@ -303,17 +303,44 @@ Response
 | url  | /ad_innovation/create  |
 | method  | POST  |
 
+
+#### Example
+
+Request POST http://localhost:7000/ad_innovation/create
+```
+{
+	"user_id": "5cd473ccc4cc785f0c3ce9b1",
+	"name": "test ad creativity",
+	"type": 1,
+	"material":1,
+	"height":100,
+	"weight":100,
+	"size":100,
+	"duration":1000,
+	"url":"http://www.google.com"
+}
+```
+Response
+```
+{
+    "code": 0,
+    "message": "success",
+    "data": "5cd47f88c4cc78629494e131"
+}
+```
+### 10. Create Advertising unit and advertising creativity relation
+
+| Key  | Value |
+| ---- | ----- |
+| url  | /unit_innovation/create  |
+| method  | POST  |
+
 | Param  | Type |
 | ---- | ----- |
 | unit_id | string |
 | innovation_id | string |
 
 #### Example
-
-| Key  | Value |
-| ---- | ----- |
-| url  | /unit_innovation/create  |
-| method  | POST  |
 
 Request POST http://localhost:7000/ad_innovation/create
 ```
@@ -329,5 +356,3 @@ Response
     "message": "success",
     "data": "5cd47f88c4cc78629494e131"
 }
-```
-### 10. Create advertising unit and advertising creativity relation
