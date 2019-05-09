@@ -6,11 +6,11 @@ import (
 )
 
 func FetchAds(request protocol.SearchRequest) protocol.SearchResponse {
-	adSlots := request.AdSlots
-	keywordFeature := request.KeyWordFeature
-	interestFeature := request.InterestFeature
-	districtFeature := request.DistrictFeature
-	isAnd := request.IsAnd
+	adSlots := request.RequestInfo.AdSlots
+	keywordFeature := request.FeatureInfo.KeyWordFeature
+	interestFeature := request.FeatureInfo.InterestFeature
+	districtFeature := request.FeatureInfo.DistrictFeature
+	isAnd := request.FeatureInfo.IsAnd
 
 	resp := protocol.SearchResponse{Slot2Ads: make(map[string][]protocol.Innovation)}
 

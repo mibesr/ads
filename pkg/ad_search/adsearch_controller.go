@@ -22,7 +22,11 @@ func FetchAds(w http.ResponseWriter, req *http.Request) {
 			log.Fatal(err)
 		}
 		r := protocol.SearchRequest{}
-		err = json.Unmarshal(data, r)
+		err = json.Unmarshal(data, &r)
+		if err != nil{
+			common.Return(400, []byte(err.Error()), w)
+			return
+		}
 		resp := service.FetchAds(r)
 		common.Return(200, []byte(common.BuildDefaultResponse(resp)), w)
 	} else {

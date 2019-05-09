@@ -84,7 +84,7 @@ func AdUnitIndexMatch(positionType int) map[string]*AdUnitIndex {
 		unitIndex := &AdUnitIndex{}
 		json.Unmarshal([]byte(data), unitIndex)
 		if unitIndex.PositionType == positionType {
-			res[id] = unitIndex
+			res[unitIndex.Id] = unitIndex
 		}
 	}
 	return res
