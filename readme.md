@@ -356,3 +356,103 @@ Response
     "message": "success",
     "data": "5cd47f88c4cc78629494e131"
 }
+```
+
+## Ad Search System
+
+### 1. Fetch advertisement
+
+| Key  | Value |
+| ---- | ----- |
+| url  | /ad_search/fetch  |
+| method  | POST  |
+
+#### Example
+
+Request POST http://localhost:7000/ad_search/fetch
+```
+{
+    "feature_info": {
+        "district_feature": {
+            "districts": [
+                {
+                    "city": "New York",
+                    "state": "NY"
+                }
+            ]
+        },
+        "interest_feature": {
+            "interests": [
+                "game",
+                "guitar"
+            ]
+        },
+        "keyword_feature": {
+            "keywords": [
+                "music",
+                "sport"
+            ]
+        },
+        "is_and": true
+    },
+    "media_id": "some media",
+    "request_info": {
+        "ad_slots": [
+            {
+                "code": "ad-x",
+                "height": 100,
+                "min_cpm": 1000,
+                "position_type": 2,
+                "types": [
+                    1,
+                    2
+                ],
+                "width": 100
+            }
+        ],
+        "app": {
+            "activity_name": "video",
+            "code": "sss",
+            "name": "myapp",
+            "package_name": "com.app"
+        },
+        "device": {
+            "code": "iphone",
+            "display_size": "1080 720",
+            "ip": "127.0.0.1",
+            "mac": "0xxxxx",
+            "model": "x",
+            "screen_size": "1080 720",
+            "serial_name": "123456789"
+        },
+        "geo": {
+            "city": "New York",
+            "latitude": 100.28,
+            "longitude": 88.61,
+            "state": "NY"
+        },
+        "request_id": "aaa"
+    }
+}
+```
+Response
+```
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "slot_2_ads": {
+            "ad-x": [
+                {
+                    "ad_id": "5cd48467c4cc78649f97527a",
+                    "ad_url": "http://www.google.com",
+                    "width": 100,
+                    "height": 100,
+                    "type": 1,
+                    "material_type": 1
+                }
+            ]
+        }
+    }
+}
+```
