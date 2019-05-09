@@ -30,17 +30,18 @@ func (s *AdPlanService) CreateAdPlan(adPlan *AdPlan) (id string, err error) {
 	return adPlan.MongoId.Hex(), err
 }
 
-func (s *AdPlanService) GetAdPlans(id string) (plans []*AdPlan, err error) {
-	err = s.Collection.Find(bson.M{"_id": bson.ObjectIdHex(id)}).All(&plans)
+func (s *AdPlanService) GetAdPlans(userId string) (plans []AdPlan, err error) {
+	plans = make([]AdPlan, 0)
+	err = s.Collection.Find(bson.M{"user_id": userId}).All(&plans)
 	return
 }
 
 func (s *AdPlanService) UpdateAdPlan(adPlan *AdPlan) (id string, err error) {
 	err = s.Collection.UpdateId(adPlan.MongoId, bson.M{"$set": bson.M{"name": adPlan.Name, "start_time": adPlan.StartTime, "end_time": adPlan.EndTime}})
-	return
+	return adPlan.MongoId.Hex(), err
 }
 
 func (s *AdPlanService) DeleteAdPlan(id string) (err error) {
 	err = s.Collection.RemoveId(bson.ObjectIdHex(id))
-	return
+	return err
 }
