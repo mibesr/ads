@@ -1,0 +1,9 @@
+{
+  "http_port": 7000,
+  "api_read_timeout": 5000,
+  "api_write_timeout": 5000,
+  "mongo_db_timeout": 5000,
+  "mongo_db_uri": "mongodb://localhost:27017",
+  "redis_uri": "localhost:6379",
+  "db_name": "ads"
+}
