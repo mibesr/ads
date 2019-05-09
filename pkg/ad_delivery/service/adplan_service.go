@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ads/pkg/ad_search/index"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -27,6 +28,13 @@ func (s *AdPlanService) CreateAdPlan(adPlan *AdPlan) (id string, err error) {
 	adPlan.CreateTime = time.Now().Unix()
 	adPlan.UpdateTime = time.Now().Unix()
 	err = s.Collection.Insert(adPlan)
+	idx := index.AdPlanIndex{
+		Id:        adPlan.MongoId.Hex(),
+		UserId:    adPlan.UserId,
+		StartDate: adPlan.StartTime,
+		EndDate:   adPlan.EndTime,
+	}
+	idx.Save()
 	return adPlan.MongoId.Hex(), err
 }
 
@@ -36,6 +44,12 @@ func (s *AdPlanService) GetAdPlans(userId string) (plans []AdPlan, err error) {
 	return
 }
 
+func (s *AdPlanService) GetAdPlanById(planId string) (plan AdPlan, err error) {
+	plan = AdPlan{}
+	err = s.Collection.FindId(bson.ObjectIdHex(planId)).One(&plan)
+	return plan, err
+}
+
 func (s *AdPlanService) UpdateAdPlan(adPlan *AdPlan) (id string, err error) {
 	err = s.Collection.UpdateId(adPlan.MongoId, bson.M{"$set": bson.M{"name": adPlan.Name, "start_time": adPlan.StartTime, "end_time": adPlan.EndTime}})
 	return adPlan.MongoId.Hex(), err
@@ -43,5 +57,9 @@ func (s *AdPlanService) UpdateAdPlan(adPlan *AdPlan) (id string, err error) {
 
 func (s *AdPlanService) DeleteAdPlan(id string) (err error) {
 	err = s.Collection.RemoveId(bson.ObjectIdHex(id))
+	idx := index.AdPlanIndex{
+		Id:        id,
+	}
+	idx.Delete()
 	return err
 }

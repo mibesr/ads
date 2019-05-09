@@ -18,8 +18,8 @@ type AdInnovationReq struct {
 	Name     string `json:"name"`
 	Type     int    `json:"type"`
 	Material int    `json:"material"`
-	Height   int64  `json:"height"`
-	Width    int64  `json:"width"`
+	Height   int  `json:"height"`
+	Width    int  `json:"width"`
 	Size     int    `json:"size"`
 	Duration int    `json:"duration"`
 	Url      string `json:"url"`

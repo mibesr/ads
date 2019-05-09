@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ads/pkg/ad_search/index"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -17,7 +18,6 @@ type AdUint struct {
 	CreateTime   int64         `bson:"create_time"`
 	UpdateTime   int64         `bson:"update_time"`
 }
-
 
 type AdUnitKeyword struct {
 	MongoId bson.ObjectId `bson:"_id"`
@@ -57,29 +57,44 @@ func (s *AdUnitService) CreateAdUnit(adUint *AdUint) (id string, err error) {
 	adUint.CreateTime = time.Now().Unix()
 	adUint.UpdateTime = time.Now().Unix()
 	err = s.AdUintCollection.Insert(adUint)
+	planIdx := index.AdPlanIndex{
+		Id: adUint.PlanId,
+	}
+	planIdx.Get()
+	idx := index.AdUnitIndex{
+		Id:           adUint.MongoId.Hex(),
+		PlanId:       adUint.PlanId,
+		PositionType: adUint.PositionType,
+		AdPlanObj:    planIdx,
+	}
+	idx.Save()
 	return adUint.MongoId.Hex(), err
 }
 
 func (s *AdUnitService) CreateKeyword(keyword *AdUnitKeyword) (id string, err error) {
 	keyword.MongoId = bson.NewObjectId()
 	err = s.AdUintKeywordCollection.Insert(keyword)
+	index.SaveInvertedIndexById(keyword.UnitId, index.UnitKeywordIndexById, keyword.Keyword)
 	return keyword.MongoId.Hex(), err
 }
 
 func (s *AdUnitService) CreateDistrict(district *AdUnitDistrict) (id string, err error) {
 	district.MongoId = bson.NewObjectId()
 	err = s.AdUintDistrictCollection.Insert(district)
+	index.SaveInvertedIndexById(district.UnitId, index.UnitDistrictIndexById, district.State+"-"+district.City)
 	return district.MongoId.Hex(), err
 }
 
 func (s *AdUnitService) CreateInterest(interest *AdUnitInterest) (id string, err error) {
 	interest.MongoId = bson.NewObjectId()
 	err = s.AdUintInterestCollection.Insert(interest)
+	index.SaveInvertedIndexById(interest.UnitId, index.UnitInterestIndexById, interest.Tag)
 	return interest.MongoId.Hex(), err
 }
 
 func (s *AdUnitService) CreateUnitInnovation(iu *InnovationUnit) (id string, err error) {
 	iu.MongoId = bson.NewObjectId()
 	err = s.AdUnitInnovationCollection.Insert(iu)
+	index.SaveByInnoId(iu.AdInnovationId, iu.AdUintId)
 	return iu.MongoId.Hex(), err
 }

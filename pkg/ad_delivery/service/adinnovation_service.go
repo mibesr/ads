@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ads/pkg/ad_search/index"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -14,8 +15,8 @@ type AdInnovation struct {
 	Name       string        `bson:"name"`
 	Type       int           `bson:"type"`
 	Material   int           `bson:"material"`
-	Height     int64         `bson:"height"`
-	Width      int64         `bson:"width"`
+	Height     int           `bson:"height"`
+	Width      int           `bson:"width"`
 	Size       int           `bson:"size"`
 	Duration   int           `bson:"duration"`
 	Url        string        `bson:"url"`
@@ -32,5 +33,15 @@ func (s *AdInnovationService) CreateAdInnovation(inno *AdInnovation) (id string,
 	inno.CreateTime = time.Now().Unix()
 	inno.UpdateTime = time.Now().Unix()
 	err = s.Collection.Insert(inno)
+	idx := index.AdInnovationIndex{
+		Id:           inno.MongoId.Hex(),
+		Name:         inno.Name,
+		Type:         inno.Type,
+		MaterialType: inno.Material,
+		Height:       inno.Height,
+		Width:        inno.Width,
+		Url:          inno.Url,
+	}
+	idx.Save()
 	return inno.MongoId.Hex(), err
 }

@@ -1,7 +1,9 @@
 package service
 
 import (
+	"ads/pkg/ad_search/index"
 	"ads/pkg/common"
+	"github.com/go-redis/redis"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -43,11 +45,23 @@ func initMongo() error {
 	return err
 }
 
+func initRedis() error {
+	client := redis.NewClient(&redis.Options{
+		Addr:     common.GConfig.RedisUri,
+		Password: "",
+		DB:       0,
+	})
+	_, err := client.Ping().Result()
+	index.GRedisClient = client
+	return err
+}
+
 func TestUserService(t *testing.T) {
 	err := initMongo()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	id, _ := GUserService.CreateUser("test", "123")
 	user := AdUser{}
 	err = GUserService.Collection.FindId(bson.ObjectIdHex(id)).One(&user)
@@ -63,6 +77,10 @@ func TestUserService(t *testing.T) {
 
 func TestAdPlanService(t *testing.T) {
 	err := initMongo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = initRedis()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,6 +114,10 @@ func TestAdPlanService(t *testing.T) {
 
 func TestAdUnitService(t *testing.T) {
 	err := initMongo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = initRedis()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,6 +181,7 @@ func TestAdUnitService(t *testing.T) {
 
 	inno := AdInnovation{
 		UserId:   user.MongoId.Hex(),
+		Name:     "test ad innovation",
 		Type:     1,
 		Material: 1,
 		Height:   100,

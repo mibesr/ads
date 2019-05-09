@@ -51,7 +51,7 @@ type AdUnitIndex struct {
 	Id           string
 	PlanId       string
 	PositionType int
-	AdPlanObj    *AdPlanIndex
+	AdPlanObj    AdPlanIndex
 }
 
 func (unit *AdUnitIndex) Get() Index {
@@ -158,28 +158,28 @@ func SelectInnovationFromUnitIndexes(adUnitIndexes map[string]*AdUnitIndex) map[
 func SaveByInnoId(innoId string, unitIds ...string) {
 	GRedisClient.SAdd("InnovationUnitIndex-InnovationId-"+innoId, unitIds)
 	for _, unitId := range unitIds {
-		SaveByUnitId(unitId, innoId)
+		GRedisClient.SAdd("InnovationUnitIndex-UnitId-"+unitId, innoId)
 	}
 }
 
 func SaveByUnitId(unitId string, innoIds ...string) {
 	GRedisClient.SAdd("InnovationUnitIndex-UnitId-"+unitId, innoIds)
 	for _, innoId := range innoIds {
-		SaveByInnoId(innoId, unitId)
+		GRedisClient.SAdd("InnovationUnitIndex-InnovationId-"+innoId, unitId)
 	}
 }
 
 func DeleteByInnoId(innoId string, unitIds ...string) {
 	GRedisClient.SRem("InnovationUnitIndex-InnovationId-"+innoId, unitIds)
 	for _, unitId := range unitIds {
-		DeleteByUnitId(unitId, innoId)
+		GRedisClient.SRem("InnovationUnitIndex-UnitId-"+unitId, innoId)
 	}
 }
 
 func DeleteByUnitId(unitId string, innoIds ...string) {
 	GRedisClient.SRem("InnovationUnitIndex-UnitId-"+unitId, innoIds)
 	for _, innoId := range innoIds {
-		DeleteByInnoId(innoId, unitId)
+		GRedisClient.SRem("InnovationUnitIndex-InnovationId-"+innoId, unitId)
 	}
 }
 
@@ -222,14 +222,14 @@ func GetInvertedIndexByKey(keyword string, t InvertedIndexKeywordType) map[strin
 func SaveInvertedIndexByKey(keyword string, t InvertedIndexKeywordType, ids ...string) {
 	GRedisClient.SAdd(string(t)+keyword, ids)
 	for _, id := range ids {
-		SaveInvertedIndexById(id, t.toIdType(), keyword)
+		GRedisClient.SAdd(string(t.toIdType())+id, keyword)
 	}
 }
 
 func DeleteInvertedIndexByKey(keyword string, t InvertedIndexKeywordType, ids ...string) {
 	GRedisClient.SRem(string(t)+keyword, ids)
 	for _, id := range ids {
-		DeleteInvertedIndexById(id, t.toIdType(), keyword)
+		GRedisClient.SRem(string(t.toIdType())+id, keyword)
 	}
 }
 
@@ -264,15 +264,15 @@ func GetInvertedIndexById(id string, t InvertedIndexIdType) map[string]bool {
 
 func SaveInvertedIndexById(id string, t InvertedIndexIdType, keywords ...string) {
 	GRedisClient.SAdd(string(t)+id, keywords)
-	for _, k := range keywords {
-		SaveInvertedIndexByKey(k, t.toKeywordType(), id)
+	for _, keyword := range keywords {
+		GRedisClient.SAdd(string(t.toKeywordType())+keyword, id)
 	}
 }
 
 func DeleteInvertedIndexById(id string, t InvertedIndexIdType, keywords ...string) {
 	GRedisClient.SRem(string(t)+id, keywords)
-	for _, k := range keywords {
-		DeleteInvertedIndexByKey(k, t.toKeywordType(), id)
+	for _, keyword := range keywords {
+		GRedisClient.SRem(string(t.toKeywordType())+keyword, id)
 	}
 }
 
