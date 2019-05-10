@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	ProjectId       string `json:"project_id"`
 	HttpPort        int    `json:"http_port"`
 	ApiReadTimeout  int    `json:"api_read_timeout"`
 	ApiWriteTimeout int    `json:"api_write_timeout"`

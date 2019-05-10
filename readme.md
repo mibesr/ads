@@ -109,7 +109,7 @@ Response
     ]
 }
 ```
-### 4. Update advertising plan
+### ~~4. Update advertising plan~~
 
 | Key  | Value |
 | ---- | ----- |
@@ -123,7 +123,7 @@ Response
 | start_time | int |
 | end_time | int |
 
-#### Example
+#### ~~Example~~
 
 Request POST http://localhost:7000/ad_plan/update
 

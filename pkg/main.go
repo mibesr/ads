@@ -6,13 +6,15 @@ import (
 	"ads/pkg/ad_search"
 	"ads/pkg/ad_search/index"
 	"ads/pkg/common"
+	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/pubsub"
+	"context"
 	"github.com/go-redis/redis"
-	"gopkg.in/mgo.v2"
+	"google.golang.org/api/option"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 )
 
 func main() {
@@ -23,12 +25,16 @@ func main() {
 		log.Fatal(err)
 	}
 	common.GConfig = &conf
-	// init MongoDB
-	if err := InitMongo(); err != nil {
+	// init database
+	if err := InitDB(); err != nil {
 		log.Fatal(err)
 	}
 	// init redis
 	if err := InitRedis(); err != nil {
+		log.Fatal(err)
+	}
+	// init message queue
+	if err := InitPub(); err != nil {
 		log.Fatal(err)
 	}
 	// init http server
@@ -37,28 +43,45 @@ func main() {
 	}
 }
 
-func InitMongo() error {
-	session, err := mgo.DialWithTimeout(common.GConfig.MongoDBUri, time.Duration(common.GConfig.MongoDBTimeout)*time.Millisecond)
+func InitHttpServer() error {
+	mux := http.NewServeMux()
+	controller.InitUserController(mux)
+	controller.InitAdPlanController(mux)
+	controller.InitAdUnitController(mux)
+	controller.InitAdInnovationController(mux)
+	ad_search.InitAdSearchController(mux)
+	println("http server is starting on port: " + strconv.Itoa(common.GConfig.HttpPort))
+	err := http.ListenAndServe(":"+strconv.Itoa(common.GConfig.HttpPort), mux)
+	return err
+}
+
+func InitDB() error {
+	// Sets your Google Cloud Platform project ID.
+	projectID := common.GConfig.ProjectId
+	ctx := context.Background()
+	// Get a Firestore client.
+	pwd, _ := os.Getwd()
+	client, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(pwd+"/pkg/auth.json"))
 	if err != nil {
 		return err
 	}
-	// init services
 	service.GUserService = &service.UserService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_user"),
+		Collection: client.Collection("ad_user"),
 	}
 	service.GAdPlanService = &service.AdPlanService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_plan"),
+		Collection: client.Collection("ad_plan"),
 	}
 	service.GAdUnitService = &service.AdUnitService{
-		AdUintCollection:           session.DB(common.GConfig.DBName).C("ad_unit"),
-		AdUintDistrictCollection:   session.DB(common.GConfig.DBName).C("ad_unit_district"),
-		AdUintKeywordCollection:    session.DB(common.GConfig.DBName).C("ad_unit_keyword"),
-		AdUintInterestCollection:   session.DB(common.GConfig.DBName).C("ad_unit_interest"),
-		AdUnitInnovationCollection: session.DB(common.GConfig.DBName).C("ad_unit_innovation"),
+		AdUintCollection:           client.Collection("ad_unit"),
+		AdUintDistrictCollection:   client.Collection("ad_unit_district"),
+		AdUintKeywordCollection:    client.Collection("ad_unit_keyword"),
+		AdUintInterestCollection:   client.Collection("ad_unit_interest"),
+		AdUnitInnovationCollection: client.Collection("ad_unit_innovation"),
 	}
 	service.GAdInnovationService = &service.AdInnovationService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_innovation"),
+		Collection: client.Collection("ad_innovation"),
 	}
+
 	return nil
 }
 
@@ -73,14 +96,13 @@ func InitRedis() error {
 	return err
 }
 
-func InitHttpServer() error {
-	mux := http.NewServeMux()
-	controller.InitUserController(mux)
-	controller.InitAdPlanController(mux)
-	controller.InitAdUnitController(mux)
-	controller.InitAdInnovationController(mux)
-	ad_search.InitAdSearchController(mux)
-	println("http server is starting on port: " + strconv.Itoa(common.GConfig.HttpPort))
-	err := http.ListenAndServe(":"+strconv.Itoa(common.GConfig.HttpPort), mux)
-	return err
+func InitPub() error {
+	pwd, _ := os.Getwd()
+	projectID := common.GConfig.ProjectId
+	cli, err := pubsub.NewClient(context.Background(), projectID, option.WithCredentialsFile(pwd+"/pkg/auth.json"))
+	if err != nil {
+		return err
+	}
+	service.PubClient = cli
+	return nil
 }

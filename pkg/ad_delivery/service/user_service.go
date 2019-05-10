@@ -2,40 +2,44 @@ package service
 
 import (
 	"ads/pkg/common"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"cloud.google.com/go/firestore"
+	"context"
 	"time"
 )
 
 var GUserService *UserService
 
 type AdUser struct {
-	MongoId  bson.ObjectId `bson:"_id"`
-	Username string        `bson:"username"`
-	Password string        `bson:"password"`
-	//Token      string        `json:"token" bson:"token"`
-	//Status     int   `bson:"status"`
-	CreateTime int64 `bson:"create_time"`
-	UpdateTime int64 `bson:"update_time"`
+	Id         string
+	Username   string
+	Password   string
+	CreateTime int64
+	UpdateTime int64
 }
 
 type UserService struct {
-	Collection *mgo.Collection
+	Collection *firestore.CollectionRef
 }
 
 func (s *UserService) CreateUser(username string, password string) (id string, err error) {
 	adUser := &AdUser{}
-	adUser.MongoId = bson.NewObjectId()
 	adUser.Username = username
 	adUser.Password = common.Md5(password)
 	adUser.CreateTime = time.Now().Unix()
 	adUser.UpdateTime = time.Now().Unix()
-	err = s.Collection.Insert(adUser)
-	return adUser.MongoId.Hex(), err
+	d, _, err := s.Collection.Add(context.Background(), adUser)
+	adUser.Id = d.ID
+	return adUser.Id, err
 }
 
 func (s *UserService) GetUserByUsername(username string) (user AdUser, err error) {
 	adUser := AdUser{}
-	err = s.Collection.Find(bson.M{"username": username}).One(&adUser)
+	it := s.Collection.Where("Username", "==", username).Documents(context.Background())
+	doc, err := it.Next()
+	if doc != nil {
+		doc.DataTo(&adUser)
+		adUser.Id = doc.Ref.ID
+		return adUser, nil
+	}
 	return adUser, err
 }

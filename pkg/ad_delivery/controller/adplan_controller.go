@@ -4,7 +4,6 @@ import (
 	"ads/pkg/ad_delivery/service"
 	"ads/pkg/common"
 	"encoding/json"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 func InitAdPlanController(mux *http.ServeMux) {
 	mux.Handle("/ad_plan/create", http.HandlerFunc(CreateAdPlan))
 	mux.Handle("/ad_plans", http.HandlerFunc(GetAdPlans))
-	mux.Handle("/ad_plan/update", http.HandlerFunc(UpdateAdPlan))
 	mux.Handle("/ad_plan/delete", http.HandlerFunc(DeleteAdPlan))
 }
 
@@ -80,7 +78,7 @@ func GetAdPlans(w http.ResponseWriter, req *http.Request) {
 			resp := make([]AdPlanResp, 0)
 			for _, plan := range plans {
 				adPlanResp := AdPlanResp{
-					Id:         plan.MongoId.Hex(),
+					Id:         plan.Id,
 					UserId:     plan.UserId,
 					Name:       plan.Name,
 					StartTime:  common.FormatTime(plan.StartTime),
@@ -97,32 +95,7 @@ func GetAdPlans(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func UpdateAdPlan(w http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" {
-		data, err := ioutil.ReadAll(req.Body)
-		defer req.Body.Close()
-		r := &AdPlanReq{}
-		err = json.Unmarshal(data, r)
-		if err != nil {
-			common.Return(400, []byte(common.JsonFormatError.Error()), w)
-			return
-		}
-		adPlan := &service.AdPlan{
-			MongoId:    bson.ObjectIdHex(r.PlanId),
-			Name:      r.Name,
-			StartTime: r.StartTime,
-			EndTime:   r.EndTime,
-		}
-		id, err := service.GAdPlanService.UpdateAdPlan(adPlan)
-		if err != nil {
-			common.Return(400, []byte(err.Error()), w)
-		} else {
-			common.Return(200, []byte(common.BuildDefaultResponse(id)), w)
-		}
-	} else {
-		common.Return(405, []byte(common.HttpPostOnly.Error()), w)
-	}
-}
+
 
 func DeleteAdPlan(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "DELETE" {

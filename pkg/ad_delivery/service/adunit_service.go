@@ -1,100 +1,90 @@
 package service
 
 import (
-	"ads/pkg/ad_search/index"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"cloud.google.com/go/firestore"
+	"context"
 	"time"
 )
 
 var GAdUnitService *AdUnitService
 
 type AdUint struct {
-	MongoId      bson.ObjectId `bson:"_id"`
-	PlanId       string        `bson:"plan_id"`
-	Name         string        `bson:"name"`
-	PositionType int           `bson:"position_type"`
-	Budget       int           `bson:"budget"`
-	CreateTime   int64         `bson:"create_time"`
-	UpdateTime   int64         `bson:"update_time"`
+	Id           string `json:"id"`
+	PlanId       string `json:"plan_id"`
+	Name         string `json:"name"`
+	PositionType int    `json:"position_type"`
+	Budget       int    `json:"budget"`
+	CreateTime   int64  `json:"create_time"`
+	UpdateTime   int64  `json:"update_time"`
 }
 
 type AdUnitKeyword struct {
-	MongoId bson.ObjectId `bson:"_id"`
-	UnitId  string        `bson:"unit_id"`
-	Keyword string        `bson:"keyword"`
+	Id      string `json:"id"`
+	UnitId  string `json:"unit_id"`
+	Keyword string `json:"keyword"`
 }
 
 type AdUnitDistrict struct {
-	MongoId bson.ObjectId `bson:"_id"`
-	UnitId  string        `bson:"unit_id"`
-	State   string        `bson:"state"`
-	City    string        `bson:"city"`
+	Id     string `json:"id"`
+	UnitId string `json:"unit_id"`
+	State  string `json:"state"`
+	City   string `json:"city"`
 }
 
 type AdUnitInterest struct {
-	MongoId bson.ObjectId `bson:"_id"`
-	UnitId  string        `bson:"unit_id"`
-	Tag     string        `bson:"tag"`
+	Id     string `json:"id"`
+	UnitId string `json:"unit_id"`
+	Tag    string `json:"tag"`
 }
 
 type InnovationUnit struct {
-	MongoId        bson.ObjectId `bson:"_id"`
-	AdInnovationId string        `bson:"ad_innovation_id"`
-	AdUintId       string        `bson:"ad_uint_id"`
+	Id             string `json:"id"`
+	AdInnovationId string `json:"ad_innovation_id"`
+	AdUintId       string `json:"ad_uint_id"`
 }
 
 type AdUnitService struct {
-	AdUintCollection           *mgo.Collection
-	AdUintKeywordCollection    *mgo.Collection
-	AdUintDistrictCollection   *mgo.Collection
-	AdUintInterestCollection   *mgo.Collection
-	AdUnitInnovationCollection *mgo.Collection
+	AdUintCollection           *firestore.CollectionRef
+	AdUintKeywordCollection    *firestore.CollectionRef
+	AdUintDistrictCollection   *firestore.CollectionRef
+	AdUintInterestCollection   *firestore.CollectionRef
+	AdUnitInnovationCollection *firestore.CollectionRef
 }
 
 func (s *AdUnitService) CreateAdUnit(adUint *AdUint) (id string, err error) {
-	adUint.MongoId = bson.NewObjectId()
 	adUint.CreateTime = time.Now().Unix()
 	adUint.UpdateTime = time.Now().Unix()
-	err = s.AdUintCollection.Insert(adUint)
-	planIdx := index.AdPlanIndex{
-		Id: adUint.PlanId,
-	}
-	planIdx.Get()
-	idx := index.AdUnitIndex{
-		Id:           adUint.MongoId.Hex(),
-		PlanId:       adUint.PlanId,
-		PositionType: adUint.PositionType,
-		AdPlanObj:    planIdx,
-	}
-	idx.Save()
-	return adUint.MongoId.Hex(), err
+	d, _, err := s.AdUintCollection.Add(context.Background(), adUint)
+	adUint.Id = d.ID
+
+	SaveAdUnitIndex(adUint)
+	return adUint.Id, err
 }
 
 func (s *AdUnitService) CreateKeyword(keyword *AdUnitKeyword) (id string, err error) {
-	keyword.MongoId = bson.NewObjectId()
-	err = s.AdUintKeywordCollection.Insert(keyword)
-	index.SaveInvertedIndexById(keyword.UnitId, index.UnitKeywordIndexById, keyword.Keyword)
-	return keyword.MongoId.Hex(), err
+	d, _, err := s.AdUintKeywordCollection.Add(context.Background(), keyword)
+	keyword.Id = d.ID
+	SaveKeywordIndex(keyword)
+	return keyword.Id, err
 }
 
 func (s *AdUnitService) CreateDistrict(district *AdUnitDistrict) (id string, err error) {
-	district.MongoId = bson.NewObjectId()
-	err = s.AdUintDistrictCollection.Insert(district)
-	index.SaveInvertedIndexById(district.UnitId, index.UnitDistrictIndexById, district.State+"-"+district.City)
-	return district.MongoId.Hex(), err
+	d, _, err := s.AdUintDistrictCollection.Add(context.Background(), district)
+	district.Id = d.ID
+	SaveDistrictIndex(district)
+	return district.Id, err
 }
 
 func (s *AdUnitService) CreateInterest(interest *AdUnitInterest) (id string, err error) {
-	interest.MongoId = bson.NewObjectId()
-	err = s.AdUintInterestCollection.Insert(interest)
-	index.SaveInvertedIndexById(interest.UnitId, index.UnitInterestIndexById, interest.Tag)
-	return interest.MongoId.Hex(), err
+	d, _, err := s.AdUintInterestCollection.Add(context.Background(), interest)
+	interest.Id = d.ID
+	SaveInterestIndex(interest)
+	return interest.Id, err
 }
 
 func (s *AdUnitService) CreateUnitInnovation(iu *InnovationUnit) (id string, err error) {
-	iu.MongoId = bson.NewObjectId()
-	err = s.AdUnitInnovationCollection.Insert(iu)
-	index.SaveByInnoId(iu.AdInnovationId, iu.AdUintId)
-	return iu.MongoId.Hex(), err
+	d, _, err := s.AdUnitInnovationCollection.Add(context.Background(), iu)
+	iu.Id = d.ID
+	SaveUnitInnovationIndex(iu)
+	return iu.Id, err
 }

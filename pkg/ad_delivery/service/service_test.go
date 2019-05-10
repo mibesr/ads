@@ -1,17 +1,17 @@
 package service
 
 import (
-	"ads/pkg/ad_search/index"
 	"ads/pkg/common"
-	"github.com/go-redis/redis"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/pubsub"
+	"context"
+	"google.golang.org/api/option"
 	"log"
 	"os"
 	"strconv"
 	"testing"
-	"time"
 )
+
 
 func initMongo() error {
 	pwd, _ := os.Getwd()
@@ -20,40 +20,43 @@ func initMongo() error {
 		log.Fatal(err)
 	}
 	common.GConfig = &conf
-
-	session, err := mgo.DialWithTimeout(common.GConfig.MongoDBUri, time.Duration(common.GConfig.MongoDBTimeout)*time.Millisecond)
+	projectID := common.GConfig.ProjectId
+	ctx := context.Background()
+	client, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(pwd+"/../../auth.json"))
 	if err != nil {
 		return err
 	}
-	// init services
+
 	GUserService = &UserService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_user"),
+		Collection: client.Collection("ad_user"),
 	}
+
 	GAdPlanService = &AdPlanService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_plan"),
+		Collection: client.Collection("ad_plan"),
 	}
 	GAdUnitService = &AdUnitService{
-		AdUintCollection:           session.DB(common.GConfig.DBName).C("ad_unit"),
-		AdUintDistrictCollection:   session.DB(common.GConfig.DBName).C("ad_unit_district"),
-		AdUintKeywordCollection:    session.DB(common.GConfig.DBName).C("ad_unit_keyword"),
-		AdUintInterestCollection:   session.DB(common.GConfig.DBName).C("ad_unit_interest"),
-		AdUnitInnovationCollection: session.DB(common.GConfig.DBName).C("ad_unit_innovation"),
+		AdUintCollection:           client.Collection("ad_unit"),
+		AdUintDistrictCollection:   client.Collection("ad_unit_district"),
+		AdUintKeywordCollection:    client.Collection("ad_unit_keyword"),
+		AdUintInterestCollection:   client.Collection("ad_unit_interest"),
+		AdUnitInnovationCollection: client.Collection("ad_unit_innovation"),
 	}
 	GAdInnovationService = &AdInnovationService{
-		Collection: session.DB(common.GConfig.DBName).C("ad_innovation"),
+		Collection: client.Collection("ad_innovation"),
 	}
-	return err
+
+	return nil
 }
 
-func initRedis() error {
-	client := redis.NewClient(&redis.Options{
-		Addr:     common.GConfig.RedisUri,
-		Password: "",
-		DB:       0,
-	})
-	_, err := client.Ping().Result()
-	index.GRedisClient = client
-	return err
+func initPub() error {
+	pwd, _ := os.Getwd()
+	projectID := common.GConfig.ProjectId
+	cli, err := pubsub.NewClient(context.Background(), projectID, option.WithCredentialsFile(pwd+"/../../auth.json"))
+	if err != nil {
+		return err
+	}
+	PubClient = cli
+	return nil
 }
 
 func TestUserService(t *testing.T) {
@@ -61,10 +64,8 @@ func TestUserService(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	id, _ := GUserService.CreateUser("test", "123")
-	user := AdUser{}
-	err = GUserService.Collection.FindId(bson.ObjectIdHex(id)).One(&user)
+	GUserService.CreateUser("test", "123")
+	user, err := GUserService.GetUserByUsername("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,35 +81,33 @@ func TestAdPlanService(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = initRedis()
+	err = initPub()
 	if err != nil {
 		log.Fatal(err)
 	}
+	GUserService.CreateUser("test", "123")
 	user, err := GUserService.GetUserByUsername("test")
 	if err != nil {
 		log.Fatal(err)
 	}
 	adPlan := &AdPlan{
-		UserId:    user.MongoId.Hex(),
+		UserId:    user.Id,
 		Name:      "test ad plan",
 		StartTime: 100000,
 		EndTime:   200000,
 	}
 	id, _ := GAdPlanService.CreateAdPlan(adPlan)
-	plans, _ := GAdPlanService.GetAdPlans(user.MongoId.Hex())
+	plans, _ := GAdPlanService.GetAdPlans(user.Id)
 	t.Log("got " + strconv.Itoa(len(plans)) + " plans")
 	for _, plan := range plans {
-		if plan.MongoId.Hex() == id {
+		if plan.Id == id {
 			t.Log("plan id = " + id + " got")
 			break
 		}
 	}
-	adPlan.Name = "test ad plan 1"
-	id, _ = GAdPlanService.UpdateAdPlan(adPlan)
-	t.Log("plan id = " + id + " updated")
 	GAdPlanService.DeleteAdPlan(id)
 	t.Log("plan id = " + id + " deleted")
-	plans, _ = GAdPlanService.GetAdPlans(user.MongoId.Hex())
+	plans, _ = GAdPlanService.GetAdPlans(user.Id)
 	t.Log("got " + strconv.Itoa(len(plans)) + " plans")
 }
 
@@ -117,13 +116,15 @@ func TestAdUnitService(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = initRedis()
+	err = initPub()
 	if err != nil {
 		log.Fatal(err)
 	}
+	GUserService.CreateUser("test", "123")
+
 	user, err := GUserService.GetUserByUsername("test")
 	adPlan := &AdPlan{
-		UserId:    user.MongoId.Hex(),
+		UserId:    user.Id,
 		Name:      "test ad plan",
 		StartTime: 100000,
 		EndTime:   200000,
@@ -180,7 +181,7 @@ func TestAdUnitService(t *testing.T) {
 	GAdUnitService.CreateDistrict(&dis2)
 
 	inno := AdInnovation{
-		UserId:   user.MongoId.Hex(),
+		UserId:   user.Id,
 		Name:     "test ad innovation",
 		Type:     1,
 		Material: 1,
@@ -193,8 +194,8 @@ func TestAdUnitService(t *testing.T) {
 
 	GAdInnovationService.CreateAdInnovation(&inno)
 	iu := InnovationUnit{
-		AdInnovationId: inno.MongoId.Hex(),
-		AdUintId:       adUnit.MongoId.Hex(),
+		AdInnovationId: inno.Id,
+		AdUintId:       adUnit.Id,
 	}
 	GAdUnitService.CreateUnitInnovation(&iu)
 }
